@@ -26,7 +26,7 @@ CREATE VIEW query1 AS
 
     FROM 
         course_layout cl
-        JOIN course_instance ci ON  ci.course_layout_id = cl.id
+        JOIN course_instance ci ON cl.id = ci.course_layout_id
         JOIN planned_activity pa ON ci.id = pa.course_instance_id
         JOIN teaching_activity ta ON pa.teaching_activity_id = ta.id
 
@@ -68,12 +68,12 @@ CREATE VIEW query2 AS
 
         FROM
             course_layout cl
-            JOIN course_instance ci ON  ci.course_layout_id = cl.id
-            LEFT JOIN allocated_activity aa ON aa.course_instance_id = ci.id
-            JOIN teaching_activity ta ON ta.id = aa.teaching_activity_id
-            JOIN employee e ON e.id = aa.employee_id
-            JOIN job_title jt ON jt.id = e.job_title_id
-            JOIN person p ON p.id = e.person_id
+            JOIN course_instance ci ON cl.id = ci.course_layout_id
+            RIGHT JOIN allocated_activity aa ON ci.id = aa.course_instance_id
+            JOIN teaching_activity ta ON aa.teaching_activity_id = ta.id
+            JOIN employee e ON aa.employee_id = e.id
+            JOIN job_title jt ON e.job_title_id = jt.id
+            JOIN person p ON e.person_id = p.id
 
         WHERE
             course_instance_id = 4
@@ -113,11 +113,11 @@ CREATE VIEW query3 AS
 
     FROM 
         course_layout cl
-        JOIN course_instance ci ON  ci.course_layout_id = cl.id
-        LEFT JOIN allocated_activity aa ON aa.course_instance_id = ci.id
-        JOIN teaching_activity ta ON ta.id = aa.teaching_activity_id
-        JOIN employee e ON e.id = aa.employee_id
-        JOIN person p ON p.id = e.person_id
+        JOIN course_instance ci ON cl.id = ci.course_layout_id
+        RIGHT JOIN allocated_activity aa ON ci.id = aa.course_instance_id
+        JOIN teaching_activity ta ON aa.teaching_activity_id = ta.id
+        JOIN employee e ON aa.employee_id = e.id
+        JOIN person p ON e.person_id = p.id
 
     WHERE
         person_id = 120 AND study_year = '2025'
@@ -140,9 +140,9 @@ CREATE VIEW query4 AS
     
     FROM 
         allocated_activity aa
-        JOIN employee e ON e.id = aa.employee_id
-        JOIN person p ON p.id = e.person_id
-        JOIN course_instance ci ON ci.id = aa.course_instance_id
+        JOIN employee e ON aa.employee_id = e.id
+        JOIN person p ON e.person_id = p.id
+        JOIN course_instance ci ON aa.course_instance_id = ci.id
 
     WHERE 
         study_period = 'P3' AND study_year = '2025'
