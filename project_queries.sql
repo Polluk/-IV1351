@@ -1,64 +1,34 @@
-
--- create a joint table which contains all data needed for the tasks
-DROP VIEW IF EXISTS collected_data CASCADE;
-CREATE OR REPLACE VIEW collected_data AS
+-- calculate planned hours for course instances in a specific year
+DROP VIEW IF EXISTS query1 CASCADE;
+CREATE VIEW query1 AS
     SELECT
         cl.course_code AS "Course Code",
-        cl.hp AS "HP",
         ci.instance_id AS "Course Instance ID",
+        cl.hp AS "HP",
         ci.study_period AS "Period",
-        ci.study_year,
         ci.num_students AS "# Students",
-        pa.course_instance_id,
-        pa.teaching_activity_id,
-        pa.planned_hours,
-        ta.activity_name,
-        ta.factor,
-        aa.employee_id AS "Employment ID",
-        aa.allocated_hours,
-        e.person_id,
-        jt.job_title AS "Designation",
-        p.first_name || ' ' || p.last_name AS "Teacher's Name"
+
+        COALESCE(SUM(ROUND(pa.planned_hours * ta.factor)) FILTER (WHERE pa.teaching_activity_id = 1), 0) AS "Lecture Hours",
+        COALESCE(SUM(ROUND(pa.planned_hours * ta.factor)) FILTER (WHERE pa.teaching_activity_id = 2), 0) AS "Tutorial Hours",
+        COALESCE(SUM(ROUND(pa.planned_hours * ta.factor)) FILTER (WHERE pa.teaching_activity_id = 3), 0) AS "Lab Hours",
+        COALESCE(SUM(ROUND(pa.planned_hours * ta.factor)) FILTER (WHERE pa.teaching_activity_id = 4), 0) AS "Seminar Hours",
+        COALESCE(SUM(ROUND(pa.planned_hours * ta.factor)) FILTER (WHERE pa.teaching_activity_id = 5), 0) AS "Other Overhead Hours",
+        COALESCE(SUM(ROUND(pa.planned_hours * ta.factor)) FILTER (WHERE pa.teaching_activity_id = 6), 0) AS "Admin",
+        COALESCE(SUM(ROUND(pa.planned_hours * ta.factor)) FILTER (WHERE pa.teaching_activity_id = 7), 0) AS "Exam",
+
+        COALESCE(SUM(ROUND(pa.planned_hours * ta.factor)) FILTER (WHERE pa.teaching_activity_id = 1), 0) +
+        COALESCE(SUM(ROUND(pa.planned_hours * ta.factor)) FILTER (WHERE pa.teaching_activity_id = 2), 0) +
+        COALESCE(SUM(ROUND(pa.planned_hours * ta.factor)) FILTER (WHERE pa.teaching_activity_id = 3), 0) +
+        COALESCE(SUM(ROUND(pa.planned_hours * ta.factor)) FILTER (WHERE pa.teaching_activity_id = 4), 0) +
+        COALESCE(SUM(ROUND(pa.planned_hours * ta.factor)) FILTER (WHERE pa.teaching_activity_id = 5), 0) +
+        COALESCE(SUM(ROUND(pa.planned_hours * ta.factor)) FILTER (WHERE pa.teaching_activity_id = 6), 0) +
+        COALESCE(SUM(ROUND(pa.planned_hours * ta.factor)) FILTER (WHERE pa.teaching_activity_id = 7), 0) AS "Total Hours"
 
     FROM 
         course_layout cl
         JOIN course_instance ci ON  ci.course_layout_id = cl.id
         JOIN planned_activity pa ON ci.id = pa.course_instance_id
         JOIN teaching_activity ta ON pa.teaching_activity_id = ta.id
-        LEFT JOIN allocated_activity aa ON pa.course_instance_id = aa.course_instance_id
-            AND pa.teaching_activity_id = aa.teaching_activity_id
-        JOIN employee e ON aa.employee_id = e.id
-        JOIN job_title jt ON e.job_title_id = jt.id
-        JOIN person p ON e.person_id = p.id;
-
--- calculate planned hours for course instances in a specific year
-DROP VIEW IF EXISTS query1 CASCADE;
-CREATE VIEW query1 AS
-    SELECT
-        "Course Code",
-        "Course Instance ID",
-        "HP",
-        "Period",
-        "# Students",
-
-        COALESCE(SUM(ROUND(planned_hours * factor)) FILTER (WHERE teaching_activity_id = 1), 0) AS "Lecture Hours",
-        COALESCE(SUM(ROUND(planned_hours * factor)) FILTER (WHERE teaching_activity_id = 2), 0) AS "Tutorial Hours",
-        COALESCE(SUM(ROUND(planned_hours * factor)) FILTER (WHERE teaching_activity_id = 3), 0) AS "Lab Hours",
-        COALESCE(SUM(ROUND(planned_hours * factor)) FILTER (WHERE teaching_activity_id = 4), 0) AS "Seminar Hours",
-        COALESCE(SUM(ROUND(planned_hours * factor)) FILTER (WHERE teaching_activity_id = 5), 0) AS "Other Overhead Hours",
-        COALESCE(SUM(ROUND(planned_hours * factor)) FILTER (WHERE teaching_activity_id = 6), 0) AS "Admin",
-        COALESCE(SUM(ROUND(planned_hours * factor)) FILTER (WHERE teaching_activity_id = 7), 0) AS "Exam",
-
-        COALESCE(SUM(ROUND(planned_hours * factor)) FILTER (WHERE teaching_activity_id = 1), 0) +
-        COALESCE(SUM(ROUND(planned_hours * factor)) FILTER (WHERE teaching_activity_id = 2), 0) +
-        COALESCE(SUM(ROUND(planned_hours * factor)) FILTER (WHERE teaching_activity_id = 3), 0) +
-        COALESCE(SUM(ROUND(planned_hours * factor)) FILTER (WHERE teaching_activity_id = 4), 0) +
-        COALESCE(SUM(ROUND(planned_hours * factor)) FILTER (WHERE teaching_activity_id = 5), 0) +
-        COALESCE(SUM(ROUND(planned_hours * factor)) FILTER (WHERE teaching_activity_id = 6), 0) +
-        COALESCE(SUM(ROUND(planned_hours * factor)) FILTER (WHERE teaching_activity_id = 7), 0) AS "Total Hours"
-
-    FROM
-        collected_data
 
     WHERE
         study_year = '2025'
@@ -74,30 +44,36 @@ CREATE VIEW query1 AS
 DROP VIEW IF EXISTS query2 CASCADE;
 CREATE VIEW query2 AS
     SELECT
-        "Course Code", 
-        "Course Instance ID", 
-        "HP", 
-        "Teacher's Name",
-        "Designation",
+        cl.course_code AS "Course Code",
+        ci.instance_id AS "Course Instance ID",
+        cl.hp AS "HP",
+        p.first_name || ' ' || p.last_name AS "Teacher's Name",
+        jt.job_title AS "Designation",
 
-        COALESCE(SUM(ROUND(allocated_hours * factor)) FILTER (WHERE teaching_activity_id = 1), 0) AS "Lecture Hours",
-        COALESCE(SUM(ROUND(allocated_hours * factor)) FILTER (WHERE teaching_activity_id = 2), 0) AS "Tutorial Hours",
-        COALESCE(SUM(ROUND(allocated_hours * factor)) FILTER (WHERE teaching_activity_id = 3), 0) AS "Lab Hours",
-        COALESCE(SUM(ROUND(allocated_hours * factor)) FILTER (WHERE teaching_activity_id = 4), 0) AS "Seminar Hours",
-        COALESCE(SUM(ROUND(allocated_hours * factor)) FILTER (WHERE teaching_activity_id = 5), 0) AS "Other Overhead Hours",
-        COALESCE(SUM(ROUND(allocated_hours * factor)) FILTER (WHERE teaching_activity_id = 6), 0) AS "Admin",
-        COALESCE(SUM(ROUND(allocated_hours * factor)) FILTER (WHERE teaching_activity_id = 7), 0) AS "Exam",
+        COALESCE(SUM(ROUND(aa.allocated_hours * ta.factor)) FILTER (WHERE aa.teaching_activity_id = 1), 0) AS "Lecture Hours",
+        COALESCE(SUM(ROUND(aa.allocated_hours * ta.factor)) FILTER (WHERE aa.teaching_activity_id = 2), 0) AS "Tutorial Hours",
+        COALESCE(SUM(ROUND(aa.allocated_hours * ta.factor)) FILTER (WHERE aa.teaching_activity_id = 3), 0) AS "Lab Hours",
+        COALESCE(SUM(ROUND(aa.allocated_hours * ta.factor)) FILTER (WHERE aa.teaching_activity_id = 4), 0) AS "Seminar Hours",
+        COALESCE(SUM(ROUND(aa.allocated_hours * ta.factor)) FILTER (WHERE aa.teaching_activity_id = 5), 0) AS "Other Overhead Hours",
+        COALESCE(SUM(ROUND(aa.allocated_hours * ta.factor)) FILTER (WHERE aa.teaching_activity_id = 6), 0) AS "Admin",
+        COALESCE(SUM(ROUND(aa.allocated_hours * ta.factor)) FILTER (WHERE aa.teaching_activity_id = 7), 0) AS "Exam",
 
-        COALESCE(SUM(ROUND(allocated_hours * factor)) FILTER (WHERE teaching_activity_id = 1), 0) +
-        COALESCE(SUM(ROUND(allocated_hours * factor)) FILTER (WHERE teaching_activity_id = 2), 0) +
-        COALESCE(SUM(ROUND(allocated_hours * factor)) FILTER (WHERE teaching_activity_id = 3), 0) +
-        COALESCE(SUM(ROUND(allocated_hours * factor)) FILTER (WHERE teaching_activity_id = 4), 0) +
-        COALESCE(SUM(ROUND(allocated_hours * factor)) FILTER (WHERE teaching_activity_id = 5), 0) +
-        COALESCE(SUM(ROUND(allocated_hours * factor)) FILTER (WHERE teaching_activity_id = 6), 0) +
-        COALESCE(SUM(ROUND(allocated_hours * factor)) FILTER (WHERE teaching_activity_id = 7), 0) AS "Total"
+        COALESCE(SUM(ROUND(aa.allocated_hours * ta.factor)) FILTER (WHERE aa.teaching_activity_id = 1), 0) +
+        COALESCE(SUM(ROUND(aa.allocated_hours * ta.factor)) FILTER (WHERE aa.teaching_activity_id = 2), 0) +
+        COALESCE(SUM(ROUND(aa.allocated_hours * ta.factor)) FILTER (WHERE aa.teaching_activity_id = 3), 0) +
+        COALESCE(SUM(ROUND(aa.allocated_hours * ta.factor)) FILTER (WHERE aa.teaching_activity_id = 4), 0) +
+        COALESCE(SUM(ROUND(aa.allocated_hours * ta.factor)) FILTER (WHERE aa.teaching_activity_id = 5), 0) +
+        COALESCE(SUM(ROUND(aa.allocated_hours * ta.factor)) FILTER (WHERE aa.teaching_activity_id = 6), 0) +
+        COALESCE(SUM(ROUND(aa.allocated_hours * ta.factor)) FILTER (WHERE aa.teaching_activity_id = 7), 0) AS "Total"
 
         FROM
-            collected_data
+            course_layout cl
+            JOIN course_instance ci ON  ci.course_layout_id = cl.id
+            LEFT JOIN allocated_activity aa ON aa.course_instance_id = ci.id
+            JOIN teaching_activity ta ON ta.id = aa.teaching_activity_id
+            JOIN employee e ON e.id = aa.employee_id
+            JOIN job_title jt ON jt.id = e.job_title_id
+            JOIN person p ON p.id = e.person_id
 
         WHERE
             course_instance_id = 4
@@ -113,30 +89,35 @@ CREATE VIEW query2 AS
 DROP VIEW IF EXISTS query3 CASCADE;
 CREATE VIEW query3 AS
     SELECT
-        "Course Code",
-        "Course Instance ID", 
-        "HP",
-        "Period",
-        "Teacher's Name",
+        cl.course_code AS "Course Code",
+        ci.instance_id AS "Course Instance ID",
+        cl.hp AS "HP",
+        ci.study_period AS "Period",
+        p.first_name || ' ' || p.last_name AS "Teacher's Name",
 
-        COALESCE(SUM(ROUND(allocated_hours * factor)) FILTER (WHERE teaching_activity_id = 1), 0) AS "Lecture Hours",
-        COALESCE(SUM(ROUND(allocated_hours * factor)) FILTER (WHERE teaching_activity_id = 2), 0) AS "Tutorial Hours",
-        COALESCE(SUM(ROUND(allocated_hours * factor)) FILTER (WHERE teaching_activity_id = 3), 0) AS "Lab Hours",
-        COALESCE(SUM(ROUND(allocated_hours * factor)) FILTER (WHERE teaching_activity_id = 4), 0) AS "Seminar Hours",
-        COALESCE(SUM(ROUND(allocated_hours * factor)) FILTER (WHERE teaching_activity_id = 5), 0) AS "Other Overhead Hours",
-        COALESCE(SUM(ROUND(allocated_hours * factor)) FILTER (WHERE teaching_activity_id = 6), 0) AS "Admin",
-        COALESCE(SUM(ROUND(allocated_hours * factor)) FILTER (WHERE teaching_activity_id = 7), 0) AS "Exam",
+        COALESCE(SUM(ROUND(aa.allocated_hours * ta.factor)) FILTER (WHERE aa.teaching_activity_id = 1), 0) AS "Lecture Hours",
+        COALESCE(SUM(ROUND(aa.allocated_hours * ta.factor)) FILTER (WHERE aa.teaching_activity_id = 2), 0) AS "Tutorial Hours",
+        COALESCE(SUM(ROUND(aa.allocated_hours * ta.factor)) FILTER (WHERE aa.teaching_activity_id = 3), 0) AS "Lab Hours",
+        COALESCE(SUM(ROUND(aa.allocated_hours * ta.factor)) FILTER (WHERE aa.teaching_activity_id = 4), 0) AS "Seminar Hours",
+        COALESCE(SUM(ROUND(aa.allocated_hours * ta.factor)) FILTER (WHERE aa.teaching_activity_id = 5), 0) AS "Other Overhead Hours",
+        COALESCE(SUM(ROUND(aa.allocated_hours * ta.factor)) FILTER (WHERE aa.teaching_activity_id = 6), 0) AS "Admin",
+        COALESCE(SUM(ROUND(aa.allocated_hours * ta.factor)) FILTER (WHERE aa.teaching_activity_id = 7), 0) AS "Exam",
 
-        COALESCE(SUM(ROUND(allocated_hours * factor)) FILTER (WHERE teaching_activity_id = 1), 0) +
-        COALESCE(SUM(ROUND(allocated_hours * factor)) FILTER (WHERE teaching_activity_id = 2), 0) +
-        COALESCE(SUM(ROUND(allocated_hours * factor)) FILTER (WHERE teaching_activity_id = 3), 0) +
-        COALESCE(SUM(ROUND(allocated_hours * factor)) FILTER (WHERE teaching_activity_id = 4), 0) +
-        COALESCE(SUM(ROUND(allocated_hours * factor)) FILTER (WHERE teaching_activity_id = 5), 0) +
-        COALESCE(SUM(ROUND(allocated_hours * factor)) FILTER (WHERE teaching_activity_id = 6), 0) +
-        COALESCE(SUM(ROUND(allocated_hours * factor)) FILTER (WHERE teaching_activity_id = 7), 0) AS "Total"
+        COALESCE(SUM(ROUND(aa.allocated_hours * ta.factor)) FILTER (WHERE aa.teaching_activity_id = 1), 0) +
+        COALESCE(SUM(ROUND(aa.allocated_hours * ta.factor)) FILTER (WHERE aa.teaching_activity_id = 2), 0) +
+        COALESCE(SUM(ROUND(aa.allocated_hours * ta.factor)) FILTER (WHERE aa.teaching_activity_id = 3), 0) +
+        COALESCE(SUM(ROUND(aa.allocated_hours * ta.factor)) FILTER (WHERE aa.teaching_activity_id = 4), 0) +
+        COALESCE(SUM(ROUND(aa.allocated_hours * ta.factor)) FILTER (WHERE aa.teaching_activity_id = 5), 0) +
+        COALESCE(SUM(ROUND(aa.allocated_hours * ta.factor)) FILTER (WHERE aa.teaching_activity_id = 6), 0) +
+        COALESCE(SUM(ROUND(aa.allocated_hours * ta.factor)) FILTER (WHERE aa.teaching_activity_id = 7), 0) AS "Total"
 
     FROM 
-        collected_data
+        course_layout cl
+        JOIN course_instance ci ON  ci.course_layout_id = cl.id
+        LEFT JOIN allocated_activity aa ON aa.course_instance_id = ci.id
+        JOIN teaching_activity ta ON ta.id = aa.teaching_activity_id
+        JOIN employee e ON e.id = aa.employee_id
+        JOIN person p ON p.id = e.person_id
 
     WHERE
         person_id = 120 AND study_year = '2025'
@@ -152,16 +133,19 @@ CREATE VIEW query3 AS
 DROP VIEW IF EXISTS query4 CASCADE;
 CREATE VIEW query4 AS
     SELECT
-        "Employment ID",
-        "Teacher's Name",
-        "Period",
-        COUNT (DISTINCT course_instance_id) AS "No of courses"
+        aa.employee_id AS "Employment ID",
+        p.first_name || ' ' || p.last_name AS "Teacher's Name",
+        ci.study_period AS "Period",
+        COUNT (DISTINCT aa.course_instance_id) AS "No of courses"
     
     FROM 
-        collected_data
+        allocated_activity aa
+        JOIN employee e ON e.id = aa.employee_id
+        JOIN person p ON p.id = e.person_id
+        JOIN course_instance ci ON ci.id = aa.course_instance_id
 
     WHERE 
-        "Period" = 'P3' AND study_year = '2025'
+        study_period = 'P3' AND study_year = '2025'
 
     GROUP BY
         "Employment ID",
